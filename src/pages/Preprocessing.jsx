@@ -1,141 +1,98 @@
 import React, { useState } from "react";
+import BASE_URL from "../config";
+import { useNavigate } from "react-router-dom";
 
-export default function Preprocessing() {
-  const [options, setOptions] = useState({
-    handleMissing: false,
-    missingMethod: "drop",
-    encodeCategorical: false,
-    encodingMethod: "onehot",
-    scaleNumeric: false,
-    scaleMethod: "standard",
-    handleOutliers: false,
-    outlierMethod: "zscore",
-  });
+const Preprocessing = () => {
+  const [missingMethod, setMissingMethod] = useState("mean");
+  const [encodingMethod, setEncodingMethod] = useState("label");
+  const [handleOutliers, setHandleOutliers] = useState(true);
+  const [status, setStatus] = useState("");
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setOptions((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
+  const filename = localStorage.getItem("processedFilename");
 
-  const handleSubmit = () => {
-    console.log("Selected Preprocessing Config:", options);
-    // Later: send to backend with file
+  const handleSubmit = async () => {
+    if (!filename) {
+      setStatus("No uploaded file found.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", filename);
+    formData.append("handleMissing", true);
+    formData.append("missingMethod", missingMethod);
+    formData.append("handleEncoding", true);
+    formData.append("encodingMethod", encodingMethod);
+    formData.append("handleOutliers", handleOutliers);
+
+    try {
+      const response = await fetch(`${BASE_URL}/preprocess/`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        localStorage.setItem("processedFilename", result.filename);
+        navigate("/results");
+      } else {
+        setStatus("Processing failed.");
+      }
+    } catch (err) {
+      console.error("Error processing file:", err);
+      setStatus("Processing error.");
+    }
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Choose Preprocessing Options</h2>
+      <h2 className="text-xl font-semibold mb-4">Choose Preprocessing Options</h2>
 
-      {/* Missing Values */}
-      <div className="mb-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="handleMissing"
-            checked={options.handleMissing}
-            onChange={handleChange}
-          />
-          Handle Missing Values
-        </label>
-        {options.handleMissing && (
-          <select
-            name="missingMethod"
-            value={options.missingMethod}
-            onChange={handleChange}
-            className="mt-2 block border p-2 rounded"
-          >
-            <option value="drop">Drop rows</option>
-            <option value="mean">Fill with Mean</option>
-            <option value="median">Fill with Median</option>
-            <option value="mode">Fill with Mode</option>
-            <option value="constant">Fill with Constant</option>
-          </select>
-        )}
-      </div>
+      <label className="block mb-2">
+        Missing Value Method:
+        <select
+          value={missingMethod}
+          onChange={(e) => setMissingMethod(e.target.value)}
+          className="ml-2"
+        >
+          <option value="mean">Mean</option>
+          <option value="median">Median</option>
+          <option value="mode">Mode</option>
+        </select>
+      </label>
 
-      {/* Encoding */}
-      <div className="mb-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="encodeCategorical"
-            checked={options.encodeCategorical}
-            onChange={handleChange}
-          />
-          Encode Categorical Variables
-        </label>
-        {options.encodeCategorical && (
-          <select
-            name="encodingMethod"
-            value={options.encodingMethod}
-            onChange={handleChange}
-            className="mt-2 block border p-2 rounded"
-          >
-            <option value="onehot">One-Hot Encoding</option>
-            <option value="label">Label Encoding</option>
-          </select>
-        )}
-      </div>
+      <label className="block mb-2">
+        Encoding Method:
+        <select
+          value={encodingMethod}
+          onChange={(e) => setEncodingMethod(e.target.value)}
+          className="ml-2"
+        >
+          <option value="label">Label Encoding</option>
+          <option value="onehot">One Hot Encoding</option>
+        </select>
+      </label>
 
-      {/* Scaling */}
-      <div className="mb-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="scaleNumeric"
-            checked={options.scaleNumeric}
-            onChange={handleChange}
-          />
-          Scale Numeric Data
-        </label>
-        {options.scaleNumeric && (
-          <select
-            name="scaleMethod"
-            value={options.scaleMethod}
-            onChange={handleChange}
-            className="mt-2 block border p-2 rounded"
-          >
-            <option value="standard">Standard Scaling</option>
-            <option value="minmax">Min-Max Scaling</option>
-            <option value="robust">Robust Scaling</option>
-          </select>
-        )}
-      </div>
+      <label className="block mb-4">
+        <input
+          type="checkbox"
+          checked={handleOutliers}
+          onChange={(e) => setHandleOutliers(e.target.checked)}
+        />
+        <span className="ml-2">Handle Outliers</span>
+      </label>
 
-      {/* Outliers */}
-      <div className="mb-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="handleOutliers"
-            checked={options.handleOutliers}
-            onChange={handleChange}
-          />
-          Handle Outliers
-        </label>
-        {options.handleOutliers && (
-          <select
-            name="outlierMethod"
-            value={options.outlierMethod}
-            onChange={handleChange}
-            className="mt-2 block border p-2 rounded"
-          >
-            <option value="zscore">Z-Score Method</option>
-            <option value="iqr">IQR Method</option>
-          </select>
-        )}
-      </div>
-
-      {/* Submit */}
       <button
         onClick={handleSubmit}
-        className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        className="bg-green-600 text-white px-4 py-2 rounded"
       >
-        Proceed to Apply
+        Process File
       </button>
+
+      {status && <p className="mt-4 text-sm">{status}</p>}
     </div>
   );
-}
+};
+
+export default Preprocessing;
+
