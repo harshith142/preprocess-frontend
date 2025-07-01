@@ -1,21 +1,26 @@
 import React from "react";
+import BASE_URL from "../config";
 
-export default function Results() {
+const Results = () => {
+  const filename = localStorage.getItem("processedFilename");
+
   const handleDownload = () => {
-    // This will eventually point to your backend's processed file
-    window.open("http://localhost:8000/download", "_blank");
+    if (filename) {
+      window.open(`${BASE_URL}/download/${filename}`, "_blank");
+    }
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Preprocessing Complete</h2>
-      <p className="mb-4 text-gray-600">You can now download the preprocessed dataset below.</p>
+      <h2 className="text-xl font-semibold mb-4">Download Processed File</h2>
       <button
         onClick={handleDownload}
-        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+        className="bg-purple-600 text-white px-4 py-2 rounded"
       >
         Download File
       </button>
     </div>
   );
-}
+};
+
+export default Results;
