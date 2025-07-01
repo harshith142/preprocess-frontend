@@ -1,58 +1,60 @@
 import React, { useState } from "react";
-import * as XLSX from "xlsx";
+import BASE_URL from "../config";
+import { useNavigate } from "react-router-dom";
 
-export default function Upload() {
-  const [file, setFile] = useState(null);
-  const [previewData, setPreviewData] = useState([]);
+const Upload = () => {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const navigate = useNavigate();
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+    setSelectedFile(e.target.files[0]);
+    setUploadStatus("");
+  };
 
-    const reader = new FileReader();
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setUploadStatus("Please select a file first.");
+      return;
+    }
 
-    reader.onload = (evt) => {
-      const data = evt.target.result;
-      const workbook = XLSX.read(data, { type: "binary" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const formData = new FormData();
+    formData.append("file", selectedFile);
 
-      setPreviewData(json.slice(0, 10)); // only show first 10 rows
-    };
+    try {
+      const response = await fetch(`${BASE_URL}/upload/`, {
+        method: "POST",
+        body: formData,
+      });
 
-    reader.readAsBinaryString(selectedFile);
-    setFile(selectedFile);
+      if (response.ok) {
+        const result = await response.json();
+        setUploadStatus("Upload successful!");
+        localStorage.setItem("processedFilename", result.filename);
+        navigate("/preprocess"); // go to preprocessing page
+      } else {
+        setUploadStatus("Upload failed.");
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      setUploadStatus("Upload error.");
+    }
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Upload CSV or Excel File</h2>
-      <input
-        type="file"
-        accept=".csv,.xlsx"
-        onChange={handleFileChange}
-        className="mb-4"
-      />
-
-      {previewData.length > 0 && (
-        <div className="mt-4 border p-4 rounded">
-          <h3 className="font-semibold mb-2">Preview (First 10 rows)</h3>
-          <table className="table-auto text-sm">
-            <tbody>
-              {previewData.map((row, i) => (
-                <tr key={i}>
-                  {row.map((cell, j) => (
-                    <td key={j} className="border px-2 py-1">
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <div className="p-6">
+      <h2 className="text-xl font-semibold mb-4">Upload CSV or Excel File</h2>
+      <input type="file" accept=".csv, .xlsx" onChange={handleFileChange} />
+      <button
+        onClick={handleUpload}
+        className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+      >
+        Upload File
+      </button>
+      {uploadStatus && <p className="mt-4 text-sm">{uploadStatus}</p>}
     </div>
   );
-}
+};
+
+export default Upload;
+
