@@ -15,7 +15,7 @@ const App = () => {
     normalizeWhitespace: false,
   });
 
-  const BASE_URL = 'https://preprocess-backend.onrender.com '; // Your deployed backend
+  const BASE_URL = 'https://preprocess-backend.onrender.com'; // Your deployed backend
 
   const handleUpload = async () => {
     if (!file) {
